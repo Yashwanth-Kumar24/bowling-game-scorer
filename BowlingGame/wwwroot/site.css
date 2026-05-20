@@ -1,0 +1,86 @@
+﻿.bowling-board {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.page-title {
+    text-align: center;
+    margin-top: 24px;
+    margin-bottom: 28px;
+}
+
+.frame {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 12px;
+    width: 115px;
+    text-align: center;
+    background-color: #fafafa;
+}
+
+.frame-header {
+    font-weight: bold;
+    margin-bottom: 12px;
+    font-size: 18px;
+}
+
+.rolls {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+    .rolls input {
+        width: 32px;
+        height: 32px;
+        text-align: center;
+        font-size: 16px;
+        border: 1px solid #999;
+        border-radius: 4px;
+    }
+
+.score {
+    margin-top: 10px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #2563eb;
+}
+
+
+.reset-container {
+    margin-top: 32px;
+    display: flex;
+    justify-content: center;
+}
+
+.reset-button {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 8px;
+    background-color: #2563eb;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+}
+
+.reset-button:hover {
+    background-color: #1d4ed8;
+}
+
+.error-message {
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.rolls input:disabled {
+    background-color: #e5e7eb;
+    cursor: not-allowed;
+}

@@ -1,0 +1,268 @@
+﻿@using BowlingGame.Models
+@using BowlingGame.Services
+@rendermode InteractiveServer
+
+@inject IBowlingScoreService ScoreService
+@inject IBowlingValidationService ValidationService
+@inject IJSRuntime JS
+
+<div class="bowling-board">
+
+    @for (int i = 0; i < Game.Frames.Count; i++)
+    {
+        var index = i;
+        var frame = Game.Frames[index];
+
+        <div class="frame">
+
+            <div class="frame-header">
+                Frame @(index + 1)
+            </div>
+
+            <div class="rolls">
+                <input id="roll-@index-1"
+                       maxlength="1"
+                       value="@frame.Roll1"
+                       @onfocus="() => HandleFocus(index, 1)"
+                       @oninput="e => HandleInput(index, 1, e.Value?.ToString())" />
+
+                <input id="roll-@index-2"
+                       maxlength="1"
+                       value="@frame.Roll2"
+                       disabled="@ValidationService.IsSecondRollDisabled(Game, index)"
+                       @onfocus="() => HandleFocus(index, 2)"
+                       @oninput="e => HandleInput(index, 2, e.Value?.ToString())" />
+
+                @if (index == 9)
+                {
+                    <input id="roll-@index-3"
+                           maxlength="1"
+                           value="@frame.Roll3"
+                           disabled="@ValidationService.IsThirdRollDisabled(Game)"
+                           @onfocus="() => HandleFocus(index, 3)"
+                           @oninput="e => HandleInput(index, 3, e.Value?.ToString())" />
+                }
+            </div>
+
+            <div class="score">
+                Score: @(Scores[index]?.ToString() ?? "")
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessages[index]))
+            {
+                <div class="error-message">
+                    @ErrorMessages[index]
+                </div>
+            }
+
+        </div>
+    }
+
+</div>
+
+<div class="reset-container">
+    <button class="reset-button" @onclick="ResetGame">RESET</button>
+</div>
+
+@code {
+    private BowlingGameModel Game = new();
+
+    private List<int?> Scores = Enumerable.Repeat<int?>(null, 10).ToList();
+
+    private List<string?> ErrorMessages = Enumerable.Repeat<string?>(null, 10).ToList();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await FocusInput(0, 1);
+        }
+    }
+
+    private async Task HandleInput(int frameIndex, int rollNumber, string? value)
+    {
+        string oldValue = GetRollValue(frameIndex, rollNumber) ?? "";
+        value = NormalizeValue(value);
+
+        if (!ValidationService.IsValidSymbol(value))
+        {
+            SetRollValue(frameIndex, rollNumber, "");
+            ValidationService.ClearRollsAfter(Game, ErrorMessages, frameIndex, rollNumber);
+
+            ErrorMessages[frameIndex] = "Use X, /, or 0-9 only.";
+            RefreshScores();
+
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(50);
+            await ClearInputValue(frameIndex, rollNumber);
+            await FocusInput(frameIndex, rollNumber);
+
+            return;
+        }
+
+        SetRollValue(frameIndex, rollNumber, value);
+
+        if (!ValidationService.IsValidBowlingEntry(Game, frameIndex, rollNumber))
+        {
+            SetRollValue(frameIndex, rollNumber, "");
+            ValidationService.ClearRollsAfter(Game, ErrorMessages, frameIndex, rollNumber);
+
+            ErrorMessages[frameIndex] = "Invalid pins for this frame.";
+            RefreshScores();
+
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(50);
+            await ClearInputValue(frameIndex, rollNumber);
+            await FocusInput(frameIndex, rollNumber);
+
+            return;
+        }
+
+        if (!string.Equals(oldValue, value, StringComparison.OrdinalIgnoreCase))
+        {
+            ValidationService.ClearRollsAfter(Game, ErrorMessages, frameIndex, rollNumber);
+        }
+
+        ErrorMessages[frameIndex] = null;
+        RefreshScores();
+
+        await MoveToNextInput(frameIndex, rollNumber, value);
+    }
+
+    private async Task HandleFocus(int frameIndex, int rollNumber)
+    {
+        var nextRequiredInput = ValidationService.GetNextRequiredInput(Game);
+
+        if (nextRequiredInput == null)
+        {
+            return;
+        }
+
+        int currentOrder = ValidationService.GetInputOrder(frameIndex, rollNumber);
+        int requiredOrder = ValidationService.GetInputOrder(
+            nextRequiredInput.Value.FrameIndex,
+            nextRequiredInput.Value.RollNumber);
+
+        if (currentOrder > requiredOrder)
+        {
+            ErrorMessages[nextRequiredInput.Value.FrameIndex] = "Please complete this roll first.";
+
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(50);
+
+            await FocusInput(
+                nextRequiredInput.Value.FrameIndex,
+                nextRequiredInput.Value.RollNumber);
+        }
+    }
+
+    private async Task MoveToNextInput(int frameIndex, int rollNumber, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(50);
+
+        if (frameIndex < 9)
+        {
+            if (rollNumber == 1 && value == "X")
+            {
+                await FocusInput(frameIndex + 1, 1);
+                return;
+            }
+
+            if (rollNumber == 1)
+            {
+                await FocusInput(frameIndex, 2);
+                return;
+            }
+
+            await FocusInput(frameIndex + 1, 1);
+            return;
+        }
+
+        if (frameIndex == 9)
+        {
+            if (rollNumber == 1)
+            {
+                await FocusInput(9, 2);
+                return;
+            }
+
+            if (rollNumber == 2 && !ValidationService.IsThirdRollDisabled(Game))
+            {
+                await FocusInput(9, 3);
+            }
+        }
+    }
+
+    private string NormalizeValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "";
+        }
+
+        return value.Trim().ToUpper();
+    }
+
+    private void SetRollValue(int frameIndex, int rollNumber, string value)
+    {
+        var frame = Game.Frames[frameIndex];
+
+        if (rollNumber == 1)
+        {
+            frame.Roll1 = value;
+        }
+        else if (rollNumber == 2)
+        {
+            frame.Roll2 = value;
+        }
+        else
+        {
+            frame.Roll3 = value;
+        }
+    }
+
+    private string? GetRollValue(int frameIndex, int rollNumber)
+    {
+        var frame = Game.Frames[frameIndex];
+
+        return rollNumber switch
+        {
+            1 => frame.Roll1,
+            2 => frame.Roll2,
+            3 => frame.Roll3,
+            _ => null
+        };
+    }
+
+    private void RefreshScores()
+    {
+        Scores = ScoreService.CalculateScores(Game);
+    }
+
+    private async Task ResetGame()
+    {
+        Game = new BowlingGameModel();
+        Scores = Enumerable.Repeat<int?>(null, 10).ToList();
+        ErrorMessages = Enumerable.Repeat<string?>(null, 10).ToList();
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(50);
+        await FocusInput(0, 1);
+    }
+
+    private async Task FocusInput(int frameIndex, int rollNumber)
+    {
+        await JS.InvokeVoidAsync("focusBowlingInput", $"roll-{frameIndex}-{rollNumber}");
+    }
+
+    private async Task ClearInputValue(int frameIndex, int rollNumber)
+    {
+        await JS.InvokeVoidAsync("clearBowlingInput", $"roll-{frameIndex}-{rollNumber}");
+    }
+}
