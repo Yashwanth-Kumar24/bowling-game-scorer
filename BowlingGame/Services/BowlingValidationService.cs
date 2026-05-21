@@ -224,6 +224,11 @@ public class BowlingValidationService : IBowlingValidationService
 
             if (frame.Roll1 == "X" && frame.Roll2 != "X")
             {
+                if (frame.Roll3 == "X")
+                {
+                    return false;
+                }
+
                 int roll2 = ParseNumber(frame.Roll2);
                 int roll3 = ParseNumber(frame.Roll3);
 

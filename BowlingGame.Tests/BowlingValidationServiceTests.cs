@@ -238,6 +238,172 @@ public class BowlingValidationServiceTests
     }
 
     [Fact]
+    public void IsValidBowlingEntry_TenthFrameStrikeFiveStrike_ReturnsFalse()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "X";
+        game.Frames[9].Roll2 = "5";
+        game.Frames[9].Roll3 = "X";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 3);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameStrikeFiveSpare_ReturnsTrue()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "X";
+        game.Frames[9].Roll2 = "5";
+        game.Frames[9].Roll3 = "/";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 3);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameSecondRollSpareAfterStrike_ReturnsFalse()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "X";
+        game.Frames[9].Roll2 = "/";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 2);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameSecondRollStrikeAfterDigit_ReturnsFalse()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "5";
+        game.Frames[9].Roll2 = "X";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 2);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameSecondRollStrikeAfterStrike_ReturnsTrue()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "X";
+        game.Frames[9].Roll2 = "X";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 2);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameSecondRollSpareAfterDigit_ReturnsTrue()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "5";
+        game.Frames[9].Roll2 = "/";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 2);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameSecondRollDigitValidSum_ReturnsTrue()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "5";
+        game.Frames[9].Roll2 = "3";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 2);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameSpareWithStrikeBonus_ReturnsTrue()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "7";
+        game.Frames[9].Roll2 = "/";
+        game.Frames[9].Roll3 = "X";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 3);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsValidBowlingEntry_TenthFrameStrikeFiveThree_ReturnsTrue()
+    {
+        var game = CreateGame();
+        game.Frames[9].Roll1 = "X";
+        game.Frames[9].Roll2 = "5";
+        game.Frames[9].Roll3 = "3";
+
+        bool result = _service.IsValidBowlingEntry(game, 9, 3);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void GetNextRequiredInput_AllFramesComplete_ReturnsNull()
+    {
+        var game = CreateGame();
+        for (int i = 0; i < 9; i++)
+        {
+            game.Frames[i].Roll1 = "1";
+            game.Frames[i].Roll2 = "1";
+        }
+        game.Frames[9].Roll1 = "7";
+        game.Frames[9].Roll2 = "2";
+
+        var result = _service.GetNextRequiredInput(game);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void GetNextRequiredInput_TenthFrameNeedsSecondRoll_ReturnsTenthFrameRoll2()
+    {
+        var game = CreateGame();
+        for (int i = 0; i < 9; i++)
+        {
+            game.Frames[i].Roll1 = "1";
+            game.Frames[i].Roll2 = "1";
+        }
+        game.Frames[9].Roll1 = "X";
+
+        var result = _service.GetNextRequiredInput(game);
+
+        Assert.NotNull(result);
+        Assert.Equal(9, result.Value.FrameIndex);
+        Assert.Equal(2, result.Value.RollNumber);
+    }
+
+    [Fact]
+    public void GetNextRequiredInput_TenthFrameNeedsThirdRoll_ReturnsTenthFrameRoll3()
+    {
+        var game = CreateGame();
+        for (int i = 0; i < 9; i++)
+        {
+            game.Frames[i].Roll1 = "1";
+            game.Frames[i].Roll2 = "1";
+        }
+        game.Frames[9].Roll1 = "X";
+        game.Frames[9].Roll2 = "5";
+
+        var result = _service.GetNextRequiredInput(game);
+
+        Assert.NotNull(result);
+        Assert.Equal(9, result.Value.FrameIndex);
+        Assert.Equal(3, result.Value.RollNumber);
+    }
+
+    [Fact]
     public void ClearRollsAfter_ClearsFutureRollsAfterEarlierEdit()
     {
         var game = CreateGame();

@@ -405,6 +405,71 @@ public class BowlingScoreServiceTests
         Assert.Equal(28, scores[9]);
     }
 
+    [Fact]
+    public void CalculateScores_TenthFrameSpareNoBonusYet_ShowsPartialTotal()
+    {
+        var game = CreateGame(
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("7", "/", null)
+        );
+
+        var scores = _service.CalculateScores(game);
+
+        Assert.Equal(28, scores[9]); // 18 + 10 (spare, bonus roll pending)
+    }
+
+    [Fact]
+    public void CalculateScores_NinthFrameStrike_PartialBonusFromTenthFrame()
+    {
+        var game = CreateGame(
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("X", null, null),
+            ("5", null, null)
+        );
+
+        var scores = _service.CalculateScores(game);
+
+        Assert.Equal(31, scores[8]); // 16 + 10 + 5 (one bonus roll known)
+        Assert.Equal(36, scores[9]); // 31 + 5
+    }
+
+    [Fact]
+    public void CalculateScores_NinthFrameStrike_FullBonusFromTenthFrame()
+    {
+        var game = CreateGame(
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("1", "1", null),
+            ("X", null, null),
+            ("5", "3", null)
+        );
+
+        var scores = _service.CalculateScores(game);
+
+        Assert.Equal(34, scores[8]); // 16 + 10 + 5 + 3
+        Assert.Equal(42, scores[9]); // 34 + 8
+    }
+
     private static BowlingGameModel CreateGame(params (string? Roll1, string? Roll2, string? Roll3)[] frames)
     {
         var game = new BowlingGameModel();
